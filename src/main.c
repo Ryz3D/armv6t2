@@ -3,12 +3,9 @@
 #include "mem.h"
 #include "cpu.h"
 
-// TODO: uint8
-extern uint8_t ram[];
-
 const uint32_t test_ins[] = {
     /*
-    0b0000000000000000, // move
+    0b0000000000000000, // mov
     0b0000010100000000, // lsl
     0b0000100000000000, // lsr
     0b0001000000000000, // asr

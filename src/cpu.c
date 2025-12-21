@@ -5,28 +5,49 @@
 #include "mem.h"
 
 cpu_registers_t cpu_reg;
-
-uint32_t cpu_pc;
+uint8_t cpu_in_it_block = 0;
 
 void cpu_init() {
     memset(&cpu_reg, 0, sizeof(cpu_registers_t));
-    cpu_pc = 0;
+    // TODO: init pc to reset vector
 }
 
-#define INS_IMM5(ins) ((ins >> 6) & 0b11111)
-#define INS_IMM8(ins) ((ins >> 0) & 0b11111111)
-#define INS_IMM11(ins) ((ins >> 0) & 0b11111111111)
+#define HW1_IMM5(hw1)  (((hw1) >> 6) & 0b11111)
+#define HW1_IMM8(hw1)  (((hw1) >> 0) & 0b11111111)
+#define HW1_IMM11(hw1) (((hw1) >> 0) & 0b11111111111)
 
-void cpu_invalid_instruction(uint32_t ins) {
-    printf("! INVALID INSTRUCTION: 0x%04X 0x%04X\r\n",
-        ins >> 16, ins & 0xFFFF);
+#define INS_DEC_REG(data, offset, bits) (cpu_reg.r[((data) >> (offset)) & ((1 << bits) - 1)])
+
+void cpu_invalid_instruction(uint16_t hw1) {
+    printf("! INVALID INSTRUCTION: hw1 = 0x%04X\r\n", hw1);
+}
+
+void cpu_invalid_instruction_32bit(uint16_t hw1, uint16_t hw2) {
+    printf("! INVALID INSTRUCTION: hw1 = 0x%04X  hw2 = 0x%04X\r\n", hw1, hw2);
 }
 
 // 1111 0xxx [...] 0xxx
 void cpu_exec_ins_32bit_data_processing_imm(uint16_t hw1, uint16_t hw2) {
-    // TODO
-    printf("0x%04X    ", hw2);
-    printf("data processing immediate");
+    // p. 3-13
+    switch ((hw1 >> 8) & 0b11) {
+        case 0b00:
+        case 0b01:
+            // data processing, modified 12-bit imm
+            break;
+        case 0b10:
+            if ((hw1 >> 6) & 0b1) {
+                // move, plain 16-bit imm
+            } else {
+                // add, subtract, plain 12-bit imm
+            }
+            break;
+        case 0b11:
+            // bit field operation, saturation with shift
+            break;
+        default:
+            cpu_invalid_instruction_32bit(hw1, hw2);
+            break;
+    }
 }
 
 // 111x 101x
@@ -72,24 +93,41 @@ void cpu_exec_ins_32bit_coprocessor(uint16_t hw1, uint16_t hw2) {
 }
 
 void cpu_exec_ins() {
-    uint16_t hw1 = MEM_READ16(cpu_reg.pc);
+    uint16_t hw1 = MEM_READ16(cpu_reg.r15_pc);
     uint16_t hw2 = 0;
     printf("(cpu_exec_ins) [0x%04X %04X] 0x%04X\r\n",
-        cpu_reg.pc >> 16,
-        cpu_reg.pc & 0xFFFF,
+        cpu_reg.r15_pc >> 16,
+        cpu_reg.r15_pc & 0xFFFF,
         hw1);
-    cpu_reg.pc += 2;
+    cpu_reg.r15_pc += 2;
 
     printf("0x%04X    ", hw1);
+    // thumb instructions
+    // p. 3-3
     switch ((hw1 >> 13) & 0b111) {
         case 0b000:
+            // shift by immediate and move (register)
+            // p. 3-4
             switch ((hw1 >> 10) & 0b111) {
                 case 0b000:
-                case 0b001:
+                case 0b001: {
                     // logical shift left
                     // if (INS_IMM5(ins) == 0) this instruction is (mis?)used as MOV
-                    printf("logical shift left");
+                    // shift by n bits, shift in zeros, may set carry to last out-shifted bit
+                    uint32_t operand = INS_DEC_REG(hw1, 3, 3);
+                    uint8_t shift = HW1_IMM5(hw1);
+                    if (!cpu_in_it_block || shift == 0) {
+                        if (shift != 0) {
+                            cpu_reg.cpsr.b.C = (operand >> (32 - shift)) & 0b1;
+                        }
+                        cpu_reg.cpsr.b.N = (operand >> 31) & 0b1;
+                        cpu_reg.cpsr.b.Z = operand == 0;
+                        cpu_reg.cpsr.b.V = 0;
+                        // TODO: flags
+                    }
+                    INS_DEC_REG(hw1, 0, 3) = operand << shift;
                     break;
+                }
                 case 0b010:
                 case 0b011:
                     // logical shift right
@@ -98,11 +136,13 @@ void cpu_exec_ins() {
                 case 0b100:
                 case 0b101:
                     // arithmetic shift right
+                    // copies of the leftmost bit are shifted in at the left
                     printf("arithmetic shift right");
                     break;
                 case 0b110:
                     if ((hw1 >> 9) & 0b1) {
                         // subtract register
+                        // carry flag = !borrow
                         printf("subtract register");
                     } else {
                         // add register
@@ -124,6 +164,8 @@ void cpu_exec_ins() {
             }
             break;
         case 0b001:
+            // add, subtract, compare, move (8-bit imm)
+            // p. 3-5
             switch ((hw1 >> 11) & 0b11) {
                 case 0b00:
                     // move immediate
@@ -150,7 +192,8 @@ void cpu_exec_ins() {
             switch ((hw1 >> 9) & 0b1111) {
                 case 0b0000:
                 case 0b0001:
-                    // data-processing register
+                    // data-processing (register)
+                    // p. 3-6
                     switch ((hw1 >> 6) & 0b1111) {
                         case 0b0000:
                             // and
@@ -222,6 +265,8 @@ void cpu_exec_ins() {
                     }
                     break;
                 case 0b0010:
+                    // special data processing
+                    // p. 3-6
                     if ((hw1 >> 8) & 0b1) {
                         // compare register incl. high registers
                         printf("compare register incl. high registers");
@@ -231,6 +276,8 @@ void cpu_exec_ins() {
                     }
                     break;
                 case 0b0011:
+                    // special data processing
+                    // p. 3-6...3-7
                     if ((hw1 >> 8) & 0b1) {
                         // branch/exchange ISA
                         printf("branch/exchange ISA");
@@ -250,36 +297,53 @@ void cpu_exec_ins() {
                     printf("load from literal pool");
                     break;
                 case 0b1000:
-                    // store word (register offset)
-                    printf("store word (register offset)");
-                    break;
                 case 0b1001:
-                    // store halfword (register offset)
-                    printf("store halfword (register offset)");
-                    break;
                 case 0b1010:
-                    // store byte (register offset)
-                    printf("store byte (register offset)");
+                    // store (register offset)
+                    // p. 3-7
+                    switch ((hw1 >> 9) & 0b11) {
+                        case 0b00:
+                            printf("store word (register offset)");
+                            break;
+                        case 0b01:
+                            printf("store halfword (register offset)");
+                            break;
+                        case 0b10:
+                            printf("store byte (register offset)");
+                            break;
+                        default:
+                            cpu_invalid_instruction(hw1);
+                            break;
+                    }
                     break;
                 case 0b1011:
-                    // load signed byte (register offset)
-                    printf("load signed byte (register offset)");
-                    break;
                 case 0b1100:
-                    // load word (register offset)
-                    printf("load word (register offset)");
-                    break;
                 case 0b1101:
-                    // load unsigned halfword (register offset)
-                    printf("load unsigned halfword (register offset)");
-                    break;
                 case 0b1110:
-                    // load unsigned byte (register offset)
-                    printf("load unsigned byte (register offset)");
-                    break;
                 case 0b1111:
-                    // load signed halfword (register offset)
-                    printf("load signed halfword (register offset)");
+                    // load (register offset)
+                    // p. 3-7
+                    switch ((hw1 >> 9) & 0b11) {
+                        case 0b00:
+                            printf("load word (register offset)");
+                            break;
+                        case 0b01:
+                            printf("load unsigned halfword (register offset)");
+                            break;
+                        case 0b10:
+                            printf("load unsigned byte (register offset)");
+                            break;
+                        case 0b11:
+                            if ((hw1 >> 11) & 0b1) {
+                                printf("load signed halfword (register offset)");
+                            } else {
+                                printf("load signed byte (register offset)");
+                            }
+                            break;
+                        default:
+                            cpu_invalid_instruction(hw1);
+                            break;
+                    }
                     break;
                 default:
                     cpu_invalid_instruction(hw1);
@@ -316,6 +380,8 @@ void cpu_exec_ins() {
             break;
         case 0b101:
             if ((hw1 >> 12) & 0b1) {
+                // miscellaneous instructions
+                // p. 3-9
                 switch ((hw1 >> 8) & 0b1111) {
                     case 0b0000:
                         // adjust stack pointer
@@ -458,8 +524,9 @@ void cpu_exec_ins() {
                 case 0b01:
                 case 0b11:
                     // 32-bit instruction
-                    hw2 = MEM_READ16(cpu_reg.pc);
-                    cpu_reg.pc += 2;
+                    // p. 3-12
+                    hw2 = MEM_READ16(cpu_reg.r15_pc);
+                    cpu_reg.r15_pc += 2;
                     switch ((hw1 >> 9) & 0b11) {
                         case 0b00:
                             if ((hw1 >> 12) & 0b1) {
@@ -493,8 +560,8 @@ void cpu_exec_ins() {
                     break;
                 case 0b10:
                     // 32-bit instruction
-                    hw2 = MEM_READ16(cpu_reg.pc);
-                    cpu_reg.pc += 2;
+                    hw2 = MEM_READ16(cpu_reg.r15_pc);
+                    cpu_reg.r15_pc += 2;
                     if ((hw2 >> 15) & 0b1) {
                         // branches, misc control
                         cpu_exec_ins_32bit_branch(hw1, hw2);
