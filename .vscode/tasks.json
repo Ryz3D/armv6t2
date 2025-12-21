@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "command": "gcc",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g", "-O0",
+                "-o",
+                "armv6t2.exe",
+                "-I",
+                "include/",
+                "-I",
+                "C:\\MinGW\\include",
+                "-I",
+                "C:\\MinGW\\lib\\gcc\\mingw32\\9.2.0\\include",
+                "-I",
+                "C:\\MinGW\\lib\\gcc\\mingw32\\9.2.0\\include-fixed",
+                "src/*.c"
+            ],
+            "problemMatcher": "$gcc",
+            "presentation": {
+                "reveal": "silent"
+            }
+        }
+    ]
+}

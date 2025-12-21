@@ -1,0 +1,516 @@
+#include <stdio.h>
+#include <memory.h>
+
+#include "cpu.h"
+#include "mem.h"
+
+cpu_registers_t cpu_reg;
+
+uint32_t cpu_pc;
+
+void cpu_init() {
+    memset(&cpu_reg, 0, sizeof(cpu_registers_t));
+    cpu_pc = 0;
+}
+
+#define INS_IMM5(ins) ((ins >> 6) & 0b11111)
+#define INS_IMM8(ins) ((ins >> 0) & 0b11111111)
+#define INS_IMM11(ins) ((ins >> 0) & 0b11111111111)
+
+void cpu_invalid_instruction(uint32_t ins) {
+    printf("! INVALID INSTRUCTION: 0x%04X 0x%04X\r\n",
+        ins >> 16, ins & 0xFFFF);
+}
+
+// 1111 0xxx [...] 0xxx
+void cpu_exec_ins_32bit_data_processing_imm(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("data processing immediate");
+}
+
+// 111x 101x
+void cpu_exec_ins_32bit_data_processing_no_imm(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("data processing (no immediate operand)");
+}
+
+// 1111 100x
+void cpu_exec_ins_32bit_load_store(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("load/store single data item, memory hints");
+}
+
+// 1110 100x x1xx
+void cpu_exec_ins_32bit_load_store_double(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("load/store, double and exclusive and table branch");
+}
+
+// 1110 100x x0xx
+void cpu_exec_ins_32bit_load_store_multi(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("load/store multiple, RFE, SRS");
+}
+
+// 1111 0xxx [...] 1xxx
+void cpu_exec_ins_32bit_branch(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("branches, misc control");
+}
+
+// 111x 1111
+void cpu_exec_ins_32bit_coprocessor(uint16_t hw1, uint16_t hw2) {
+    // TODO
+    printf("0x%04X    ", hw2);
+    printf("coprocessor");
+}
+
+void cpu_exec_ins() {
+    uint16_t hw1 = MEM_READ16(cpu_reg.pc);
+    uint16_t hw2 = 0;
+    printf("(cpu_exec_ins) [0x%04X %04X] 0x%04X\r\n",
+        cpu_reg.pc >> 16,
+        cpu_reg.pc & 0xFFFF,
+        hw1);
+    cpu_reg.pc += 2;
+
+    printf("0x%04X    ", hw1);
+    switch ((hw1 >> 13) & 0b111) {
+        case 0b000:
+            switch ((hw1 >> 10) & 0b111) {
+                case 0b000:
+                case 0b001:
+                    // logical shift left
+                    // if (INS_IMM5(ins) == 0) this instruction is (mis?)used as MOV
+                    printf("logical shift left");
+                    break;
+                case 0b010:
+                case 0b011:
+                    // logical shift right
+                    printf("logical shift right");
+                    break;
+                case 0b100:
+                case 0b101:
+                    // arithmetic shift right
+                    printf("arithmetic shift right");
+                    break;
+                case 0b110:
+                    if ((hw1 >> 9) & 0b1) {
+                        // subtract register
+                        printf("subtract register");
+                    } else {
+                        // add register
+                        printf("add register");
+                    }
+                    break;
+                case 0b111:
+                    if ((hw1 >> 9) & 0b1) {
+                        // subtract immediate
+                        printf("subtract immediate");
+                    } else {
+                        // add immediate
+                        printf("add immediate");
+                    }
+                    break;
+                default:
+                    cpu_invalid_instruction(hw1);
+                    break;
+            }
+            break;
+        case 0b001:
+            switch ((hw1 >> 11) & 0b11) {
+                case 0b00:
+                    // move immediate
+                    printf("move immediate");
+                    break;
+                case 0b01:
+                    // compare immediate
+                    printf("compare immediate");
+                    break;
+                case 0b10:
+                    // add immediate
+                    printf("add immediate");
+                    break;
+                case 0b11:
+                    // subtract immediate
+                    printf("subtract immediate");
+                    break;
+                default:
+                    cpu_invalid_instruction(hw1);
+                    break;
+            }
+            break;
+        case 0b010:
+            switch ((hw1 >> 9) & 0b1111) {
+                case 0b0000:
+                case 0b0001:
+                    // data-processing register
+                    switch ((hw1 >> 6) & 0b1111) {
+                        case 0b0000:
+                            // and
+                            printf("register and");
+                            break;
+                        case 0b0001:
+                            // XOR
+                            printf("register xor");
+                            break;
+                        case 0b0010:
+                            // LSL
+                            printf("register logical shift left");
+                            break;
+                        case 0b0011:
+                            // LSR
+                            printf("register logical shift right");
+                            break;
+                        case 0b0100:
+                            // ASR
+                            printf("register arithmetic shift right");
+                            break;
+                        case 0b0101:
+                            // ADC
+                            printf("register add with carry");
+                            break;
+                        case 0b0110:
+                            // SBC
+                            printf("register subtract with carry");
+                            break;
+                        case 0b0111:
+                            // ROR
+                            printf("register rotate right");
+                            break;
+                        case 0b1000:
+                            // TST
+                            printf("register test");
+                            break;
+                        case 0b1001:
+                            // RSB
+                            printf("register reverse subtract");
+                            break;
+                        case 0b1010:
+                            // CMP
+                            printf("register compare");
+                            break;
+                        case 0b1011:
+                            // CMN
+                            printf("register compare negative");
+                            break;
+                        case 0b1100:
+                            // ORR
+                            printf("register or");
+                            break;
+                        case 0b1101:
+                            // MUL
+                            printf("register multiply");
+                            break;
+                        case 0b1110:
+                            // BIC
+                            printf("register bit clear");
+                            break;
+                        case 0b1111:
+                            // MVN
+                            printf("register move negative");
+                            break;
+                        default:
+                            cpu_invalid_instruction(hw1);
+                            break;
+                    }
+                    break;
+                case 0b0010:
+                    if ((hw1 >> 8) & 0b1) {
+                        // compare register incl. high registers
+                        printf("compare register incl. high registers");
+                    } else {
+                        // add register incl. high registers
+                        printf("add register incl. high registers");
+                    }
+                    break;
+                case 0b0011:
+                    if ((hw1 >> 8) & 0b1) {
+                        // branch/exchange ISA
+                        printf("branch/exchange ISA");
+                        if ((hw1 >> 7) & 0b1) {
+                            printf(" and link");
+                        }
+                    } else {
+                        // move register incl. high registers
+                        printf("move register incl. high registers");
+                    }
+                    break;
+                case 0b0100:
+                case 0b0101:
+                case 0b0110:
+                case 0b0111:
+                    // load from literal pool
+                    printf("load from literal pool");
+                    break;
+                case 0b1000:
+                    // store word (register offset)
+                    printf("store word (register offset)");
+                    break;
+                case 0b1001:
+                    // store halfword (register offset)
+                    printf("store halfword (register offset)");
+                    break;
+                case 0b1010:
+                    // store byte (register offset)
+                    printf("store byte (register offset)");
+                    break;
+                case 0b1011:
+                    // load signed byte (register offset)
+                    printf("load signed byte (register offset)");
+                    break;
+                case 0b1100:
+                    // load word (register offset)
+                    printf("load word (register offset)");
+                    break;
+                case 0b1101:
+                    // load unsigned halfword (register offset)
+                    printf("load unsigned halfword (register offset)");
+                    break;
+                case 0b1110:
+                    // load unsigned byte (register offset)
+                    printf("load unsigned byte (register offset)");
+                    break;
+                case 0b1111:
+                    // load signed halfword (register offset)
+                    printf("load signed halfword (register offset)");
+                    break;
+                default:
+                    cpu_invalid_instruction(hw1);
+                    break;
+            }
+            break;
+        case 0b011:
+            // load/store word/byte immediate offset
+            if ((hw1 >> 11) & 0b1) {
+                printf("load ");
+            } else {
+                printf("store ");
+            }
+            if ((hw1 >> 12) & 0b1) {
+                printf("byte ");
+            } else {
+                printf("word ");
+            }
+            printf("(immediate offset)");
+            break;
+        case 0b100:
+            // load/store halfword immediate offset
+            // load/store stack
+            if ((hw1 >> 11) & 0b1) {
+                printf("load ");
+            } else {
+                printf("store ");
+            }
+            if ((hw1 >> 12) & 0b1) {
+                printf("stack (word)");
+            } else {
+                printf("halfword (immediate offset)");
+            }
+            break;
+        case 0b101:
+            if ((hw1 >> 12) & 0b1) {
+                switch ((hw1 >> 8) & 0b1111) {
+                    case 0b0000:
+                        // adjust stack pointer
+                        if ((hw1 >> 7) & 0b1) {
+                            printf("increment stack pointer by immediate");
+                        } else {
+                            printf("decrement stack pointer by immediate");
+                        }
+                        break;
+                    case 0b0010:
+                        // sign/zero extend
+                        if ((hw1 >> 7) & 0b1) {
+                            printf("unsigned ");
+                        } else {
+                            printf("signed ");
+                        }
+                        printf("extend ");
+                        if ((hw1 >> 6) & 0b1) {
+                            printf("byte");
+                        } else {
+                            printf("halfword");
+                        }
+                        break;
+                    case 0b0001:
+                    case 0b0011:
+                        // compare/branch on zero
+                        printf("compare/branch on zero");
+                        break;
+                    case 0b1001:
+                    case 0b1011:
+                        // compare/branch on non-zero
+                        printf("compare/branch on non-zero");
+                        break;
+                    case 0b0100:
+                    case 0b0101:
+                        // push register list
+                        printf("push register list");
+                        break;
+                    case 0b1100:
+                    case 0b1101:
+                        // pop register list
+                        printf("pop register list");
+                        break;
+                    case 0b0110:
+                        switch ((hw1 >> 4) & 0b1111) {
+                            case 0b0101:
+                                // set endianness
+                                printf("endianness");
+                                break;
+                            case 0b0110:
+                            case 0b0111:
+                                if ((hw1 >> 3) & 0b1) {
+                                    cpu_invalid_instruction(hw1);
+                                } else {
+                                    // change processor state
+                                    printf("change processor state");
+                                }
+                                break;
+                            case 0b0100:
+                            default:
+                                cpu_invalid_instruction(hw1);
+                                break;
+                        }
+                        break;
+                    case 0b1010:
+                        // reverse bytes
+                        printf("reverse bytes");
+                        break;
+                    case 0b1110:
+                        // software breakpoint
+                        printf("software breakpoint");
+                        break;
+                    case 0b1111:
+                        if ((hw1 >> 0) & 0b1111 == 0b0000) {
+                            // nop-compatible hints
+                            printf("nop");
+                        } else {
+                            // if-then instructions
+                            printf("if-then instructions");
+                        }
+                        break;
+                    default:
+                        cpu_invalid_instruction(hw1);
+                        break;
+                }
+            } else {
+                // add to sp/pc
+                if ((hw1 >> 11) & 0b1) {
+                    printf("add to sp");
+                } else {
+                    printf("add to pc");
+                }
+            }
+            break;
+        case 0b110:
+            if ((hw1 >> 12) & 0b1) {
+                switch ((hw1 >> 8) & 0b1111) {
+                    case 0b0000:
+                    case 0b0001:
+                    case 0b0010:
+                    case 0b0011:
+                    case 0b0100:
+                    case 0b0101:
+                    case 0b0110:
+                    case 0b0111:
+                    case 0b1000:
+                    case 0b1001:
+                    case 0b1010:
+                    case 0b1011:
+                    case 0b1100:
+                    case 0b1101:
+                        // conditional branch
+                        printf("conditional branch");
+                        break;
+                    case 0b1111:
+                        // syscall
+                        printf("syscall");
+                        break;
+                    case 0b1110:
+                    default:
+                        cpu_invalid_instruction(hw1);
+                        break;
+                }
+            } else {
+                // load/store multiple
+                if ((hw1 >> 11) & 0b1) {
+                    printf("load ");
+                } else {
+                    printf("store ");
+                }
+                printf("multiple");
+            }
+            break;
+        case 0b111:
+            switch ((hw1 >> 11) & 0b11) {
+                case 0b00:
+                    // unconditional branch
+                    printf("unconditional branch");
+                    break;
+                case 0b01:
+                case 0b11:
+                    // 32-bit instruction
+                    hw2 = MEM_READ16(cpu_reg.pc);
+                    cpu_reg.pc += 2;
+                    switch ((hw1 >> 9) & 0b11) {
+                        case 0b00:
+                            if ((hw1 >> 12) & 0b1) {
+                                // load/store single data item, memory hints
+                                cpu_exec_ins_32bit_load_store(hw1, hw2);
+                            } else {
+                                if ((hw1 >> 6) & 0b1) {
+                                    // load/store, double and exclusive
+                                    // table branch
+                                    cpu_exec_ins_32bit_load_store_double(hw1, hw2);
+                                } else {
+                                    // load/store multiple
+                                    // RFE
+                                    // SRS
+                                    cpu_exec_ins_32bit_load_store_multi(hw1, hw2);
+                                }
+                            }
+                            break;
+                        case 0b01:
+                            // data processing (no immediate operand)
+                            cpu_exec_ins_32bit_data_processing_no_imm(hw1, hw2);
+                            break;
+                        case 0b11:
+                            // coprocessor
+                            cpu_exec_ins_32bit_coprocessor(hw1, hw2);
+                            break;
+                        default:
+                            cpu_invalid_instruction(hw1);
+                            break;
+                    }
+                    break;
+                case 0b10:
+                    // 32-bit instruction
+                    hw2 = MEM_READ16(cpu_reg.pc);
+                    cpu_reg.pc += 2;
+                    if ((hw2 >> 15) & 0b1) {
+                        // branches, misc control
+                        cpu_exec_ins_32bit_branch(hw1, hw2);
+                    } else {
+                        // data processing immediate
+                        cpu_exec_ins_32bit_data_processing_imm(hw1, hw2);
+                    }
+                    break;
+                default:
+                    cpu_invalid_instruction(hw1);
+                    break;
+            }
+            break;
+        default:
+            cpu_invalid_instruction(hw1);
+            break;
+    }
+    printf("\r\n");
+}
