@@ -32,7 +32,15 @@ typedef struct cpu_registers {
     cpu_status_t spsr;
 } cpu_registers_t;
 
+typedef union fpu_registers {
+    float sp[32];
+    double dp[16];
+} fpu_registers_t;
+
+#define CPU_VECTOR_TABLE (0x00000000)
+
 extern cpu_registers_t cpu_reg;
+extern fpu_registers_t fpu_reg;
 
 void cpu_init();
 void cpu_exec_ins();

@@ -1,0 +1,32 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "arm-none-eabi-gcc: build",
+			"command": "arm-none-eabi-gcc",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-mcpu=cortex-m7",
+				"-mfpu=fpv5-d16", "-mfloat-abi=hard",
+				"-mthumb",
+				"-Wall",
+				"-O0",
+				"-I", ".",
+				"*.c",
+				"-S",
+				"-o", "test"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"reveal": "silent",
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+		}
+	]
+}

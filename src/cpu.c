@@ -5,11 +5,14 @@
 #include "mem.h"
 
 cpu_registers_t cpu_reg;
+fpu_registers_t fpu_reg;
+
 uint8_t cpu_in_it_block = 0;
 
 void cpu_init() {
     memset(&cpu_reg, 0, sizeof(cpu_registers_t));
-    // TODO: init pc to reset vector
+    cpu_reg.r13_sp = mem_read32(CPU_VECTOR_TABLE + 0x0000);
+    cpu_reg.r15_pc = mem_read32(CPU_VECTOR_TABLE + 0x0004);
 }
 
 #define HW1_IMM5(hw1)  (((hw1) >> 6) & 0b11111)
@@ -90,10 +93,19 @@ void cpu_exec_ins_32bit_coprocessor(uint16_t hw1, uint16_t hw2) {
     // TODO
     printf("0x%04X    ", hw2);
     printf("coprocessor");
+    /*
+    0xE000EF34	FPCCR	RW	0xC0000000	Context Control Register
+    0xE000EF38	FPCAR	RW	-	Context Address Register
+    0xE000EF3C	FPDSCR	RW	0x00000000	Default Status Control Register
+    0xE000EF40	MVFR0	RO	0x10110221	Media and VFP Feature Register 0
+    0xE000EF44	MVFR1	RO	0x12000011[a]	Media and VFP Feature Register 1
+    0xE000EF48	MVFR2	RO	0x00000040	Media and VFP Feature Register 2
+    */
+   // -> fpu_reg
 }
 
 void cpu_exec_ins() {
-    uint16_t hw1 = MEM_READ16(cpu_reg.r15_pc);
+    uint16_t hw1 = mem_read16(cpu_reg.r15_pc);
     uint16_t hw2 = 0;
     printf("(cpu_exec_ins) [0x%04X %04X] 0x%04X\r\n",
         cpu_reg.r15_pc >> 16,
@@ -280,6 +292,7 @@ void cpu_exec_ins() {
                     // p. 3-6...3-7
                     if ((hw1 >> 8) & 0b1) {
                         // branch/exchange ISA
+                        // LSB signals thumb, but is being ignored for actual PC address
                         printf("branch/exchange ISA");
                         if ((hw1 >> 7) & 0b1) {
                             printf(" and link");
@@ -525,7 +538,7 @@ void cpu_exec_ins() {
                 case 0b11:
                     // 32-bit instruction
                     // p. 3-12
-                    hw2 = MEM_READ16(cpu_reg.r15_pc);
+                    hw2 = mem_read16(cpu_reg.r15_pc);
                     cpu_reg.r15_pc += 2;
                     switch ((hw1 >> 9) & 0b11) {
                         case 0b00:
@@ -560,7 +573,7 @@ void cpu_exec_ins() {
                     break;
                 case 0b10:
                     // 32-bit instruction
-                    hw2 = MEM_READ16(cpu_reg.r15_pc);
+                    hw2 = mem_read16(cpu_reg.r15_pc);
                     cpu_reg.r15_pc += 2;
                     if ((hw2 >> 15) & 0b1) {
                         // branches, misc control
