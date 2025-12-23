@@ -56,42 +56,54 @@ void cpu_exec_ins_32bit_data_processing_imm(uint16_t hw1, uint16_t hw2) {
 // 111x 101x
 void cpu_exec_ins_32bit_data_processing_no_imm(uint16_t hw1, uint16_t hw2) {
     // TODO
+#if DEBUG_CPU_PRINT_INS
     printf("0x%04X    ", hw2);
+#endif
     printf("data processing (no immediate operand)");
 }
 
 // 1111 100x
 void cpu_exec_ins_32bit_load_store(uint16_t hw1, uint16_t hw2) {
     // TODO
+#if DEBUG_CPU_PRINT_INS
     printf("0x%04X    ", hw2);
+#endif
     printf("load/store single data item, memory hints");
 }
 
 // 1110 100x x1xx
 void cpu_exec_ins_32bit_load_store_double(uint16_t hw1, uint16_t hw2) {
     // TODO
+#if DEBUG_CPU_PRINT_INS
     printf("0x%04X    ", hw2);
+#endif
     printf("load/store, double and exclusive and table branch");
 }
 
 // 1110 100x x0xx
 void cpu_exec_ins_32bit_load_store_multi(uint16_t hw1, uint16_t hw2) {
     // TODO
+#if DEBUG_CPU_PRINT_INS
     printf("0x%04X    ", hw2);
+#endif
     printf("load/store multiple, RFE, SRS");
 }
 
 // 1111 0xxx [...] 1xxx
 void cpu_exec_ins_32bit_branch(uint16_t hw1, uint16_t hw2) {
     // TODO
+#if DEBUG_CPU_PRINT_INS
     printf("0x%04X    ", hw2);
+#endif
     printf("branches, misc control");
 }
 
 // 111x 1111
 void cpu_exec_ins_32bit_coprocessor(uint16_t hw1, uint16_t hw2) {
     // TODO
+#if DEBUG_CPU_PRINT_INS
     printf("0x%04X    ", hw2);
+#endif
     printf("coprocessor");
     /*
     0xE000EF34	FPCCR	RW	0xC0000000	Context Control Register
@@ -107,13 +119,14 @@ void cpu_exec_ins_32bit_coprocessor(uint16_t hw1, uint16_t hw2) {
 void cpu_exec_ins() {
     uint16_t hw1 = mem_read16(cpu_reg.r15_pc);
     uint16_t hw2 = 0;
+#if DEBUG_CPU_PRINT_INS
     printf("(cpu_exec_ins) [0x%04X %04X] 0x%04X\r\n",
         cpu_reg.r15_pc >> 16,
         cpu_reg.r15_pc & 0xFFFF,
         hw1);
+#endif
     cpu_reg.r15_pc += 2;
 
-    printf("0x%04X    ", hw1);
     // thumb instructions
     // p. 3-3
     switch ((hw1 >> 13) & 0b111) {
@@ -124,6 +137,7 @@ void cpu_exec_ins() {
                 case 0b000:
                 case 0b001: {
                     // logical shift left
+                    printf("logical shift left");
                     // if (INS_IMM5(ins) == 0) this instruction is (mis?)used as MOV
                     // shift by n bits, shift in zeros, may set carry to last out-shifted bit
                     uint32_t operand = INS_DEC_REG(hw1, 3, 3);
@@ -399,9 +413,9 @@ void cpu_exec_ins() {
                     case 0b0000:
                         // adjust stack pointer
                         if ((hw1 >> 7) & 0b1) {
-                            printf("increment stack pointer by immediate");
-                        } else {
                             printf("decrement stack pointer by immediate");
+                        } else {
+                            printf("increment stack pointer by immediate");
                         }
                         break;
                     case 0b0010:
@@ -592,5 +606,7 @@ void cpu_exec_ins() {
             cpu_invalid_instruction(hw1);
             break;
     }
+//#if DEBUG_CPU_PRINT_INS
     printf("\r\n");
+//#endif
 }

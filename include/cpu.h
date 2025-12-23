@@ -38,6 +38,7 @@ typedef union fpu_registers {
 } fpu_registers_t;
 
 #define CPU_VECTOR_TABLE (0x00000000)
+#define DEBUG_CPU_PRINT_INS 0
 
 extern cpu_registers_t cpu_reg;
 extern fpu_registers_t fpu_reg;

@@ -40,17 +40,27 @@ mem_controller_t *mem_add_controller(mem_controller_config_t controller_config) 
 }
 
 void mem_remove_controller(mem_controller_t *controller) {
-    mem_controller_t *last_controller;
-    for (last_controller = mem_first_controller; last_controller != NULL; last_controller = last_controller->next) {
-        if (last_controller->next == controller) {
-            break;
+    if (controller != mem_first_controller) {
+        mem_controller_t *last_controller;
+        for (last_controller = mem_first_controller; last_controller != NULL; last_controller = last_controller->next) {
+            if (last_controller->next == controller) {
+                break;
+            }
         }
+        if (last_controller == NULL) {
+            printf("WARNING: mem_remove_controller without any controllers (for %p)\r\n", controller);
+            return;
+        }
+        if (last_controller->next != controller) {
+            printf("WARNING: mem_remove_controller got non-registered controller %p\r\n", controller);
+            return;
+        }
+        if (last_controller != NULL) {
+            last_controller->next = controller->next;
+        }
+    } else {
+        mem_first_controller = controller->next;
     }
-    if (last_controller->next != controller) {
-        printf("WARNING: mem_remove_controller got non-registered controller %p\r\n", controller);
-        return;
-    }
-    last_controller->next = controller->next;
     if (!controller->config.read_only) {
         free(controller->buffer);
     }

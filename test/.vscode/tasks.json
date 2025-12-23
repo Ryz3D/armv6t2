@@ -2,24 +2,72 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "cppbuild",
-			"label": "arm-none-eabi-gcc: build",
+			"type": "shell",
+			"label": "arm-none-eabi-gcc: build .S",
 			"command": "arm-none-eabi-gcc",
 			"args": [
 				"-fdiagnostics-color=always",
-				"-mcpu=cortex-m7",
-				"-mfpu=fpv5-d16", "-mfloat-abi=hard",
-				"-mthumb",
+				"-ffreestanding", "-nostdlib", "--specs=nosys.specs",
+				"-mcpu=cortex-m7", "-mthumb",
+				"-mfpu=fpv5-d16", "-mfloat-abi=soft",
 				"-Wall",
-				"-O0",
-				"-I", ".",
-				"*.c",
+				"-O1",
+				"-I", ".", "*.c",
 				"-S",
-				"-o", "test"
+				"-o", "build/test.S"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
+			"presentation": {
+				"reveal": "silent",
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+		},
+		{
+			"type": "shell",
+			"label": "arm-none-eabi-gcc: build .elf",
+			"command": "arm-none-eabi-gcc",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-ffreestanding", "-nostdlib", "--specs=nosys.specs",
+				"-mcpu=cortex-m7", "-mthumb",
+				"-mfpu=fpv5-d16", "-mfloat-abi=soft",
+				"-Wall",
+				"-O1",
+				"-I", ".", "*.c",
+				"-o", "build/test.elf"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"reveal": "silent",
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+		},
+		{
+			"type": "cppbuild",
+			"label": "arm-none-eabi-gcc: build .bin",
+			"command": "arm-none-eabi-objcopy",
+			"args": [
+				"-debugging",
+				"-O", "binary",
+				"build/test.elf",
+				"build/test.bin"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"dependsOn": [
+				"arm-none-eabi-gcc: build .elf"
+			],
 			"presentation": {
 				"reveal": "silent",
 			},
